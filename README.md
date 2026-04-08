@@ -1,17 +1,49 @@
-# expense_tracker
+# 💸 Expense Tracker App
 
-A new Flutter project.
+A modern Flutter-based expense tracking application that helps users manage daily spending, categorize expenses, and gain insights through analytics.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features
 
-A few resources to get you started if this is your first Flutter project:
+-  Authentication (Login / Logout) *(Firebase Auth ready)*
+-  Add and manage expenses
+-  Category-based tracking (Food, Travel, Bills, etc.)
+-  Filter expenses (Today, Yesterday, Weekly, Monthly)
+-  Analytics with charts (category-wise insights)
+-  Expense detail view with document support
+-  Local storage using Hive (offline support)
+-  Firebase integration (for future cloud sync & auth)
+-  Clean and modern UI
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tech Stack
+
+- Flutter
+- Riverpod (State Management)
+- Hive (Local Database)
+- Firebase (Auth / storage / firestore)
+- fl_chart (Analytics)
+
+---
+
+## 📸 Screenshots
+
+| Login | Dashboard | Add Expense | Analytics |
+|------|----------|------------|----------|
+| ![Login](screenshots/login.jpg) | ![Dashboard](screenshots/dashboard.jpg) | ![Add](screenshots/add.jpg) | ![Analytics](screenshots/analytics.jpg) |
+
+---
+
+## 🛠️ Setup Instructions
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Cva-Murugan/Expense-Tracker.git
+
+cd Expense-Tracker
+
+flutter pub get
+
+flutter run
