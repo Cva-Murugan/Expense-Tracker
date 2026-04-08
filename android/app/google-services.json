@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "193721869714",
+    "project_id": "warranty-valut",
+    "storage_bucket": "warranty-valut.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193721869714:android:6ed1ec214f028262a48d4b",
+        "android_client_info": {
+          "package_name": "com.miniproject.expensetracker.expense_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2-qDhvMVVqYGasb_aJ8vjvkEPQ_nVfS8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193721869714:android:c615ab1f23193864a48d4b",
+        "android_client_info": {
+          "package_name": "com.warrantyvalut.warranty_valut"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2-qDhvMVVqYGasb_aJ8vjvkEPQ_nVfS8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
