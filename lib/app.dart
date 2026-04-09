@@ -49,7 +49,7 @@ class MyApp extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.data != null) {
-            return const DashboardScreen();
+            return DashboardScreen();
           }
           return const LoginScreen();
         },

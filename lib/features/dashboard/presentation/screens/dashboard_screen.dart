@@ -20,7 +20,7 @@ final selectedFilterProvider = StateProvider<ExpenseFilter>(
 );
 
 class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+  DashboardScreen({super.key});
 
   String getCategoryImage(String category) {
     switch (category.toLowerCase()) {
@@ -34,6 +34,14 @@ class DashboardScreen extends ConsumerWidget {
         return "assets/images/others.png";
     }
   }
+
+  final filters = {
+    ExpenseFilter.all: "All",
+    ExpenseFilter.today: "Today",
+    ExpenseFilter.yesterday: "Yesterday",
+    ExpenseFilter.week: "This Week",
+    ExpenseFilter.month: "This Month",
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -134,22 +142,8 @@ class DashboardScreen extends ConsumerWidget {
             (sum, item) => sum + item.amount,
           );
 
-          if (filteredExpenses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset("assets/images/empty.png", height: 150),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "No Expenses Yet",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text("Start adding your expenses"),
-                ],
-              ),
-            );
+          if (expenses.isEmpty) {
+            return noExpenseWidget();
           }
 
           return Column(
@@ -176,7 +170,7 @@ class DashboardScreen extends ConsumerWidget {
 
               SizedBox(height: 10),
 
-              expenseCard(filteredExpenses, getCategoryImage),
+              expenseCard(filteredExpenses, getCategoryImage, selectedFilter),
             ],
           );
         },
@@ -194,84 +188,115 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Center noExpenseWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset("assets/images/empty.png", height: 150),
+          const SizedBox(height: 20),
+          const Text(
+            "No Expenses Yet",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text("Start adding your expenses"),
+        ],
+      ),
+    );
+  }
+
   Widget expenseCard(
     List<ExpenseModel> filteredExpenses,
     String Function(String category) getCategoryImage,
+    ExpenseFilter selectedFilter,
   ) {
+    final label = filters[selectedFilter]!;
+
     return Expanded(
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: filteredExpenses.length,
-        itemBuilder: (context, index) {
-          final item = filteredExpenses[index];
-
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            elevation: 4,
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: ListTile(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ExpenseDetailScreen(expense: item),
-                  ),
-                );
-              },
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 12,
-                horizontal: 16,
-              ),
-
-              //image
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  getCategoryImage(item.category),
-                  width: 40,
-                  height: 40,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    //placeholder
-                    return const Icon(Icons.receipt_long, size: 32);
-                  },
-                ),
-              ),
-
-              title: Text(
-                item.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              subtitle: Row(
+      child: filteredExpenses.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  //const Icon(Icons.label, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
+                  Image.asset("assets/images/empty.png", height: 120),
+                  const SizedBox(height: 16),
                   Text(
-                    item.category,
-                    style: const TextStyle(color: Colors.grey),
+                    "No expenses for $label",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Try changing the filter",
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: filteredExpenses.length,
+              itemBuilder: (context, index) {
+                final item = filteredExpenses[index];
 
-              trailing: Text(
-                "₹ ${item.amount}",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
-              ),
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  elevation: 4,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ExpenseDetailScreen(expense: item),
+                        ),
+                      );
+                    },
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        getCategoryImage(item.category),
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.receipt_long, size: 32);
+                        },
+                      ),
+                    ),
+                    title: Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      item.category,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: Text(
+                      "₹ ${item.amount}",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 
@@ -331,14 +356,6 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget filterSelector(WidgetRef ref) {
     final selected = ref.watch(selectedFilterProvider);
-
-    final filters = {
-      ExpenseFilter.all: "All",
-      ExpenseFilter.today: "Today",
-      ExpenseFilter.yesterday: "Yesterday",
-      ExpenseFilter.week: "This Week",
-      ExpenseFilter.month: "This Month",
-    };
 
     return SizedBox(
       height: 50,

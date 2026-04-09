@@ -20,7 +20,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   final _auth = FirebaseAuth.instance;
 
   void _init() {
-    _auth.authStateChanges().listen((user) {
+    _auth.authStateChanges().listen((user) async {
+      if (user != null) {
+        final box = Hive.box<ExpenseModel>(HiveBoxes.expenseBox);
+        await box.clear();
+
+        final remoteRepo = ExpenseRemoteRepo();
+        final expenses = await remoteRepo.fetchExpenses();
+
+        for (var expense in expenses) {
+          await box.put(expense.id, expense);
+        }
+      }
+
       state = AsyncValue.data(user);
     });
   }

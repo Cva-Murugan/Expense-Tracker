@@ -40,7 +40,7 @@ class ExpenseRemoteRepo {
       return ExpenseModel(
         id: data['id'],
         title: data['title'],
-        amount: data['amount'],
+        amount: (data['amount'] as num).toDouble(),
         date: DateTime.parse(data['date']),
         category: data['category'],
         notes: data['notes'],
