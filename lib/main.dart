@@ -9,19 +9,22 @@ import 'app.dart';
 import 'features/expense/data/models/expense_model.dart';
 import 'local_db/hive_boxes.dart';
 
-import 'core/services/sync_service.dart';
+//import 'core/services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  //Hive.init(".");
   await Hive.initFlutter();
 
   Hive.registerAdapter(ExpenseModelAdapter());
 
   await Hive.openBox<ExpenseModel>(HiveBoxes.expenseBox);
-  await SyncService().syncExpenses();
+
+  // upload expense whenever start up app
+  //await SyncService().syncExpenses();
 
   runApp(const ProviderScope(child: MyApp()));
 }

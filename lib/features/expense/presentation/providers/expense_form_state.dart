@@ -3,6 +3,7 @@ enum ExpenseStep { info, category, document, review }
 class ExpenseFormState {
   final String? title;
   final double? amount;
+  final String? amountText;
   final DateTime? date;
   final String? category;
   final String? notes;
@@ -15,6 +16,7 @@ class ExpenseFormState {
   ExpenseFormState({
     this.title,
     this.amount,
+    this.amountText,
     this.date,
     this.category,
     this.notes,
@@ -28,6 +30,7 @@ class ExpenseFormState {
   ExpenseFormState copyWith({
     String? title,
     double? amount,
+    String? amountText,
     DateTime? date,
     String? category,
     String? notes,
@@ -40,6 +43,7 @@ class ExpenseFormState {
     return ExpenseFormState(
       title: title ?? this.title,
       amount: amount ?? this.amount,
+      amountText: amountText ?? this.amountText,
       date: date ?? this.date,
       category: category ?? this.category,
       notes: notes ?? this.notes,

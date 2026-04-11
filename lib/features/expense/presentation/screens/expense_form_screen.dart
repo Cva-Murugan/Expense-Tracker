@@ -1,16 +1,82 @@
+// Internal utilities and status components
+import 'package:expense_tracker/core/utils/snackbar_manager.dart';
 import 'package:expense_tracker/features/expense/presentation/widgets/step_progress_indicator.dart';
+import 'package:expense_tracker/features/utils/global.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Media and file handling
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
+// State management for the expense form
 import '../providers/expense_form_notifier.dart';
 import '../providers/expense_form_state.dart';
+// OCR and Speech recognition services
+import 'package:expense_tracker/features/expense/data/services/ocr_service.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-class ExpenseFormScreen extends ConsumerWidget {
+// Multi-step form to capture expense details, including OCR and voice notes support
+class ExpenseFormScreen extends ConsumerStatefulWidget {
   const ExpenseFormScreen({super.key});
+
+  @override
+  ConsumerState<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
+}
+
+class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
+  final _titleController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _ocrService = OCRService();
+
+  late stt.SpeechToText _speechToText;
+  bool _isListening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _speechToText = stt.SpeechToText();
+    SnackbarManager.dismiss();
+  }
+
+  void _listenToSpeech(ExpenseFormNotifier notifier) async {
+    if (!_isListening) {
+      bool available = await _speechToText.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (error) {
+          if (mounted) setState(() => _isListening = false);
+        },
+      );
+
+      if (available) {
+        setState(() => _isListening = true);
+        _speechToText.listen(
+          onResult: (result) {
+            final text = result.recognizedWords;
+            _notesController.text = text;
+            notifier.updateNotes(text);
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speechToText.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
 
   int getStepIndex(ExpenseStep step) {
     switch (step) {
@@ -25,10 +91,48 @@ class ExpenseFormScreen extends ConsumerWidget {
     }
   }
 
+  // Handles Optical Character Recognition for receipts
+  Future<void> _handleOCR(
+    ImageSource source,
+    BuildContext context,
+    ExpenseFormNotifier notifier,
+  ) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile == null) return;
+
+    Navigator.pop(context);
+
+    final file = File(pickedFile.path);
+
+    final result = await _ocrService.process(file);
+
+    print(result.rawText);
+
+    notifier.updateTitle(result.title ?? '');
+    notifier.updateAmount(result.amount?.toString() ?? '');
+
+    final parsedDate = result.date != null ? parseDate(result.date!) : null;
+    notifier.updateDate(parsedDate);
+
+    notifier.updateFile(file.path);
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(expenseFormProvider);
     final notifier = ref.read(expenseFormProvider.notifier);
+
+    if (_titleController.text != (state.title ?? '')) {
+      _titleController.text = state.title ?? '';
+    }
+
+    _amountController.text = state.amountText ?? "";
+
+    if (_notesController.text != (state.notes ?? '')) {
+      _notesController.text = state.notes ?? '';
+    }
 
     ref.listen(expenseFormProvider, (previous, next) {
       if (next.isLoading && previous?.isLoading != true) {
@@ -46,12 +150,17 @@ class ExpenseFormScreen extends ConsumerWidget {
       if (previous?.isLoading == true &&
           next.isLoading == false &&
           next.error == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Expense added successfully"),
-            backgroundColor: Colors.green,
-          ),
+        SnackbarManager.show(
+          message: "Expense added successfully",
+          backgroundColor: Colors.green,
         );
+
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     content: Text("Expense added successfully"),
+        //     backgroundColor: Colors.green,
+        //   ),
+        // );
 
         Future.delayed(const Duration(milliseconds: 300), () {
           Navigator.pop(context);
@@ -159,10 +268,12 @@ class ExpenseFormScreen extends ConsumerWidget {
 
   Widget _modernTextField({
     required String label,
+    TextEditingController? controller,
     TextInputType? type,
     Function(String)? onChanged,
   }) {
     return TextField(
+      controller: controller,
       keyboardType: type,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -222,6 +333,7 @@ class ExpenseFormScreen extends ConsumerWidget {
     );
   }
 
+  // Builds the UI based on the current step in the process
   Widget _buildStepContent(
     ExpenseFormState state,
     ExpenseFormNotifier notifier,
@@ -254,11 +366,17 @@ class ExpenseFormScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          _modernTextField(label: "Title", onChanged: notifier.updateTitle),
+          _modernTextField(
+            label: "Title",
+            controller: _titleController,
+            onChanged: notifier.updateTitle,
+          ),
+
           const SizedBox(height: 10),
 
           _modernTextField(
             label: "Amount",
+            controller: _amountController,
             type: TextInputType.number,
             onChanged: notifier.updateAmount,
           ),
@@ -294,8 +412,70 @@ class ExpenseFormScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _showOCRSheet(context, notifier),
+                icon: const Icon(Icons.document_scanner),
+                label: const Text("Scan Bill"),
+              ),
+              const SizedBox(width: 10),
+              const Text("to auto-fill details"),
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  void _showOCRSheet(BuildContext context, ExpenseFormNotifier notifier) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Top bar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Scan Bill",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Camera"),
+                onTap: () => _handleOCR(ImageSource.camera, context, notifier),
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text("Gallery"),
+                onTap: () => _handleOCR(ImageSource.gallery, context, notifier),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -332,9 +512,27 @@ class ExpenseFormScreen extends ConsumerWidget {
 
           const SizedBox(height: 16),
 
-          _modernTextField(
-            label: "Notes (optional)",
+          TextField(
+            controller: _notesController,
+            maxLines: 4,
             onChanged: notifier.updateNotes,
+            decoration: InputDecoration(
+              alignLabelWithHint: true,
+              labelText: "Notes (optional)",
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isListening ? Icons.mic : Icons.mic_none,
+                  color: _isListening ? Colors.red : Colors.grey,
+                ),
+                onPressed: () => _listenToSpeech(notifier),
+              ),
+            ),
           ),
         ],
       ),
@@ -441,7 +639,7 @@ class ExpenseFormScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           _item("Title", state.title),
-          _item("Amount", state.amount?.toString()),
+          _item("Amount", state.amountText),
           _item("Date", state.date?.toString().split(" ")[0]),
           _item("Category", state.category),
           _item("Notes", state.notes ?? "-"),

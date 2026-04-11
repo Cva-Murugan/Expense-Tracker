@@ -6,6 +6,7 @@ import '../../data/models/expense_model.dart';
 import '../../data/repositories/expense_local_repo.dart';
 import '../../../../core/services/sync_service.dart';
 import '../../../../core/services/storage_service.dart';
+import '../../../../core/services/network_service.dart';
 
 final expenseFormProvider =
     StateNotifierProvider<ExpenseFormNotifier, ExpenseFormState>((ref) {
@@ -53,12 +54,16 @@ class ExpenseFormNotifier extends StateNotifier<ExpenseFormState> {
     state = state.copyWith(title: value);
   }
 
+  // void updateAmount(String value) {
+  //   final parsed = double.tryParse(value);
+  //   state = state.copyWith(amount: parsed);
+  // }
+
   void updateAmount(String value) {
-    final parsed = double.tryParse(value);
-    state = state.copyWith(amount: parsed);
+    state = state.copyWith(amountText: value);
   }
 
-  void updateDate(DateTime value) {
+  void updateDate(DateTime? value) {
     state = state.copyWith(date: value);
   }
 
@@ -81,7 +86,7 @@ class ExpenseFormNotifier extends StateNotifier<ExpenseFormState> {
           state = state.copyWith(error: "Title is required");
           return false;
         }
-        if (state.amount == null) {
+        if (state.amountText == null) {
           state = state.copyWith(error: "Valid amount required");
           return false;
         }
@@ -108,7 +113,7 @@ class ExpenseFormNotifier extends StateNotifier<ExpenseFormState> {
     state = state.copyWith(error: null);
     return true;
   }
-
+  /*
   Future<void> submit() async {
     if (!validateCurrentStep()) return;
 
@@ -123,6 +128,9 @@ class ExpenseFormNotifier extends StateNotifier<ExpenseFormState> {
         final storageService = StorageService();
         uploadedUrl = await storageService.uploadFile(file);
       }
+
+      final amount = double.tryParse(state.amountText ?? "") ?? 0.0;
+      state = state.copyWith(amount: amount);
 
       final expense = ExpenseModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -143,6 +151,65 @@ class ExpenseFormNotifier extends StateNotifier<ExpenseFormState> {
 
       state = state.copyWith(isLoading: false);
 
+      state = ExpenseFormState();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+*/
+
+  Future<void> submit() async {
+    if (!validateCurrentStep()) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final networkService = NetworkService();
+      final isOnline = await networkService.checkNow();
+
+      String? filePathOrUrl;
+
+      if (state.filePath != null && state.filePath!.isNotEmpty) {
+        final file = File(state.filePath!);
+
+        if (isOnline) {
+          try {
+            final storageService = StorageService();
+            filePathOrUrl = await storageService.uploadFile(file);
+          } catch (e) {
+            // Even if online, upload can fail -> fallback to local
+            filePathOrUrl = state.filePath;
+          }
+        } else {
+          // Offline -> store local file path
+          filePathOrUrl = state.filePath;
+        }
+      }
+
+      final amount = double.tryParse(state.amountText ?? "") ?? 0.0;
+      state = state.copyWith(amount: amount);
+      final expense = ExpenseModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: state.title!,
+        amount: state.amount!,
+        date: state.date!,
+        category: state.category!,
+        notes: state.notes,
+        filePath: filePathOrUrl ?? '',
+        isSynced: isOnline,
+      );
+
+      final repo = ExpenseLocalRepo();
+      await repo.addExpense(expense);
+
+      // Only sync if online
+      if (isOnline) {
+        final syncService = SyncService();
+        await syncService.syncExpenses();
+      }
+
+      state = state.copyWith(isLoading: false);
       state = ExpenseFormState();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

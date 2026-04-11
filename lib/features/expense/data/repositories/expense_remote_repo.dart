@@ -26,7 +26,11 @@ class ExpenseRemoteRepo {
   }
 
   Future<List<ExpenseModel>> fetchExpenses() async {
-    final userId = _auth.currentUser!.uid;
+    final userId = _auth.currentUser?.uid;
+
+    if (userId == null) {
+      print("User not logged in");
+    }
 
     final snapshot = await _firestore
         .collection("users")
@@ -48,5 +52,16 @@ class ExpenseRemoteRepo {
         isSynced: true,
       );
     }).toList();
+  }
+
+  Future<void> deleteExpense(String id) async {
+    final userId = _auth.currentUser!.uid;
+
+    await _firestore
+        .collection("users")
+        .doc(userId)
+        .collection("expenses")
+        .doc(id)
+        .delete();
   }
 }

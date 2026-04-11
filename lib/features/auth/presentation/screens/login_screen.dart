@@ -1,8 +1,10 @@
 // import 'package:firebase_auth/firebase_auth.dart';
+import 'package:expense_tracker/core/utils/snackbar_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 // import '../../../utils/global.dart';
+import 'package:expense_tracker/core/services/network_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +18,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final passwordTextController = TextEditingController();
 
   bool isValid = false;
+  bool _isOfflineShown = false;
+
+  // final networkProvider = StreamProvider<bool>((ref) {
+  //   final service = NetworkService();
+  //   return service.isOnline;
+  // });
 
   Future<void> checkLogin() async {
     // if (!_formKey.currentState!.validate()) return;
@@ -27,6 +35,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       passwordTextController.text.trim(),
     );
   }
+
+  // void _showOfflineSnackbar(BuildContext context) {
+  //   final messenger = ScaffoldMessenger.of(context);
+
+  //   // Remove existing before showing new
+  //   messenger.hideCurrentSnackBar();
+
+  //   messenger.showSnackBar(
+  //     const SnackBar(
+  //       content: Text("No internet connection"),
+  //       duration: Duration(days: 1), // effectively "infinite"
+  //       behavior: SnackBarBehavior.floating,
+  //     ),
+  //   );
+  // }
+
+  // void _hideSnackbar(BuildContext context) {
+  //   ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  // }
 
   void validate() {
     final email = emailTextController.text;
@@ -46,14 +73,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen(authProvider, (previous, next) {
       if (next.hasError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error.toString()),
-            backgroundColor: Colors.red,
-          ),
+        SnackbarManager.show(
+          message: next.error.toString(),
+          backgroundColor: Colors.red,
         );
+
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(next.error.toString()),
+        //     backgroundColor: Colors.red,
+        //   ),
+        // );
       }
     });
+
+    ref.listen<AsyncValue<bool>>(networkStatusProvider, (previous, next) {
+      next.whenData((isOnline) {
+        if (!isOnline && !_isOfflineShown) {
+          _isOfflineShown = true;
+          // _showOfflineSnackbar(context);
+          SnackbarManager.show(
+            message: "No internet connection",
+            backgroundColor: Colors.red,
+            infinite: true,
+          );
+        } else if (isOnline && _isOfflineShown) {
+          _isOfflineShown = false;
+          SnackbarManager.dismiss();
+        }
+      });
+    });
+
+    final networkState = ref.watch(networkStatusProvider);
+
+    final isOnline = networkState.maybeWhen(
+      data: (value) => value,
+      orElse: () => true,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -98,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 20),
 
-                    loginButtonWidget(authState),
+                    loginButtonWidget(authState, isOnline),
 
                     // if (authState.hasError)
                     //   Text(
@@ -168,16 +224,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget loginButtonWidget(AsyncValue authState) {
+  Widget loginButtonWidget(AsyncValue authState, bool isOnline) {
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: authState.isLoading
+        onPressed: (!isOnline || authState.isLoading || !isValid)
             ? null
-            : isValid
-            ? checkLogin
-            : null,
+            : checkLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color.fromRGBO(39, 84, 138, 1),
         ),

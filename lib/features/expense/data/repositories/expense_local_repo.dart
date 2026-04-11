@@ -1,12 +1,15 @@
+import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
 import '../models/expense_model.dart';
 import '../../../../local_db/hive_boxes.dart';
 
 class ExpenseLocalRepo {
-  final Box<ExpenseModel> _box = Hive.box<ExpenseModel>(HiveBoxes.expenseBox);
+  Box<ExpenseModel> _box = Hive.box<ExpenseModel>(HiveBoxes.expenseBox);
 
   Future<void> addExpense(ExpenseModel expense) async {
     await _box.put(expense.id, expense);
+    await _box.flush(); //
+    debugPrint('expense added to local db.. count: ${_box.length}');
   }
 
   List<ExpenseModel> getAllExpenses() {

@@ -2,17 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../expense/data/models/expense_model.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+class AnalyticsScreen extends StatefulWidget {
   final List<ExpenseModel> expenses;
 
   const AnalyticsScreen({super.key, required this.expenses});
 
   @override
-  Widget build(BuildContext context) {
-    final total = expenses.fold(0.0, (sum, e) => sum + e.amount);
-    final categoryData = _getCategoryData(expenses);
-    final categoryCount = getCategoryCount(expenses);
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
 
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  int touchedIndex = -1;
+  double animationValue = 0;
+  bool showChart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      setState(() {
+        showChart = true;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final categoryData = _getCategoryData(widget.expenses);
+    final categoryCount = getCategoryCount(widget.expenses);
     return Scaffold(
       appBar: AppBar(title: const Text("Analytics")),
       body: Padding(
@@ -23,20 +41,40 @@ class AnalyticsScreen extends StatelessWidget {
               height: 250,
               child: PieChart(
                 PieChartData(
-                  sections: categoryData.entries.map((e) {
+                  pieTouchData: PieTouchData(
+                    touchCallback: (event, response) {
+                      setState(() {
+                        // 🔥 THIS IS THE MISSING PIECE
+                        if (!event.isInterestedForInteractions ||
+                            response == null ||
+                            response.touchedSection == null) {
+                          touchedIndex = -1;
+                          return;
+                        }
+                        touchedIndex =
+                            response.touchedSection!.touchedSectionIndex;
+                      });
+                    },
+                  ),
+                  sections: List.generate(categoryData.length, (i) {
+                    final e = categoryData.entries.toList()[i];
+                    final isTouched = i == touchedIndex;
+
                     return PieChartSectionData(
-                      value: e.value,
+                      value: showChart ? e.value * (1 + i * 0.05) : 0,
                       title: "${e.key}\n₹${e.value.toStringAsFixed(0)}",
-                      radius: 70,
+                      radius: isTouched ? 85 : 70,
                       color: _getColor(e.key),
-                      titleStyle: const TextStyle(
-                        fontSize: 12,
+                      titleStyle: TextStyle(
+                        fontSize: isTouched ? 14 : 12,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     );
-                  }).toList(),
+                  }),
                 ),
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
               ),
             ),
 
