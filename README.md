@@ -4,27 +4,32 @@ A modern Flutter-based expense tracking application that helps users manage dail
 
 ---
 
-## 🚀 Features
+## Features
 
--  Authentication (Login / Logout) *(Firebase Auth ready)*
--  Add and manage expenses
--  Category-based tracking (Food, Travel, Bills, etc.)
--  Filter expenses (Today, Yesterday, Weekly, Monthly)
--  Analytics with charts (category-wise insights)
--  Expense detail view with document support
--  Local storage using Hive (offline support)
--  Firebase integration (for future cloud sync & auth)
--  Clean and modern UI
+- Authentication (Login / Logout) *(Firebase Auth ready)*
+- Add and manage expenses
+- Category-based tracking (Food, Travel, Bills, etc.)
+- Filter and Sorting expenses (Today, Yesterday, Weekly, Monthly)
+- Analytics with charts (category-wise insights)
+- Expense detail view with document support
+- Local storage using Hive (offline support)
+- Firebase integration *(Auth, Storage, Firestore – scalable for sync)*
+- Clean and modern UI  
 
----
+###  Advanced Features
+- Lazy loading & pagination for scalable expense listing  
+- Voice-based expense entry using speech recognition  
+- Smart receipt scanning with OCR for automatic data extraction  
 
-## Tech Stack
+##  Tech Stack
 
-- Flutter
-- Riverpod (State Management)
-- Hive (Local Database)
-- Firebase (Auth / storage / firestore)
-- fl_chart (Analytics)
+- Flutter  
+- Riverpod (State Management)  
+- Hive (Local Database)  
+- Firebase (Auth / Storage / Firestore)  
+- fl_chart (Analytics)  
+- speech_to_text (Voice Input)  
+- google_mlkit_text_recognition (OCR)  
 
 ---
 
@@ -47,3 +52,5 @@ cd Expense-Tracker
 flutter pub get
 
 flutter run
+
+
